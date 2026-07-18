@@ -1,0 +1,14 @@
+.git
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.env
+frontend
+docs
+data/eval_results.json
+data/retrieval_log.json
+.claude

@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface font-sans antialiased;
+  }
+}
+
+/* Material Symbols icon defaults. */
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  user-select: none;
+  line-height: 1;
+}
+
+/* Markdown content inside assistant messages. */
+.prose-legal p {
+  @apply mb-3 leading-relaxed;
+}
+.prose-legal ul {
+  @apply mb-3 list-disc pl-5 space-y-1;
+}
+.prose-legal ol {
+  @apply mb-3 list-decimal pl-5 space-y-1;
+}
+.prose-legal strong {
+  @apply font-semibold text-on-surface;
+}
+.prose-legal a {
+  @apply text-primary underline;
+}
+.prose-legal h1,
+.prose-legal h2,
+.prose-legal h3 {
+  @apply font-semibold mb-2 mt-3;
+}

@@ -1,0 +1,49 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    # Postgres uses /dev/shm for parallel index builds; Docker's 64 MB default is too
+    # small for HNSW builds on a populated corpus (e.g. `ingest-* --force`).
+    shm_size: "1gb"
+    environment:
+      POSTGRES_USER: mietrecht
+      POSTGRES_PASSWORD: mietrecht
+      POSTGRES_DB: mietrecht
+    ports:
+      - "5432:5432" # kept exposed so the local `uv run` dev flow still works
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mietrecht -d mietrecht"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Overrides the .env localhost DSN inside the compose network.
+      DATABASE_URL: postgresql://mietrecht:mietrecht@db:5432/mietrecht
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
