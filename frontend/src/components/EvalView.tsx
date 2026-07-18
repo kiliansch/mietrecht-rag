@@ -9,10 +9,19 @@ const METRIC_LABELS: Record<string, string> = {
   answer_relevancy: "Answer Relevance",
   context_precision: "Context Precision",
   context_recall: "Context Recall",
+  hit_rate: "Hit-Rate@k",
+  mrr: "MRR",
 };
 
 const AGENT_METRICS = ["faithfulness", "answer_relevancy", "context_precision", "context_recall"];
-const RETRIEVAL_METRICS = ["context_precision", "context_recall"];
+const RETRIEVAL_BASE_METRICS = ["context_precision", "context_recall"];
+// Deterministic, judge-free retrieval metrics — shown only for collections that report
+// them (case law carries a gold reference). See docs/parent_document_retrieval_eval.md.
+const RETRIEVAL_EXTRA_METRICS = ["hit_rate", "mrr"];
+
+function retrievalMetrics(scores: Record<string, number>): string[] {
+  return [...RETRIEVAL_BASE_METRICS, ...RETRIEVAL_EXTRA_METRICS.filter((m) => m in scores)];
+}
 
 export function EvalView({ config }: { config: AppConfig }) {
   const t = useT();
@@ -83,11 +92,26 @@ export function EvalView({ config }: { config: AppConfig }) {
               key={collection}
               title={t("eval.retrievalTitle", { collection })}
               scores={scores}
-              metrics={RETRIEVAL_METRICS}
+              metrics={retrievalMetrics(scores)}
               thresholds={config.thresholds}
             />
           ))}
         </div>
+      )}
+
+      {results?.usage && (
+        <p className="rounded-lg bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
+          {t("eval.usage")}: {results.usage.input_tokens.toLocaleString("de-DE")}{" "}
+          {t("eval.tokensIn")} · {results.usage.output_tokens.toLocaleString("de-DE")}{" "}
+          {t("eval.tokensOut")} · ${results.usage.cost_usd.toFixed(4)}
+        </p>
+      )}
+
+      {results?.retrieval?.case_law && (
+        <p className="text-xs text-on-surface-variant">
+          <Icon name="info" className="mr-1 align-middle text-sm" />
+          {t("eval.caseLawNote")}
+        </p>
       )}
 
       <p className="text-xs text-on-surface-variant">

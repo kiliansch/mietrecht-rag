@@ -228,6 +228,11 @@ const DE: Dict = {
   "eval.colScore": "Score",
   "eval.colThreshold": "Schwelle",
   "eval.colStatus": "Status",
+  "eval.usage": "Token-Verbrauch dieses Laufs",
+  "eval.tokensIn": "Eingabe",
+  "eval.tokensOut": "Ausgabe",
+  "eval.caseLawNote":
+    "Bei der Rechtsprechung unterschätzt „Context Precision“ strukturell: Die Parent-Document-Suche liefert mehrere gültige Entscheidungen zu derselben Rechtsfrage, die gegen eine einzige Referenzantwort als „nicht nützlich“ bewertet werden. Hit-Rate@k und MRR sind die verlässlicheren, richter-unabhängigen Retrieval-Signale.",
 
   // Login
   "login.subtitle": "Bitte melden Sie sich mit Ihrem Konto an.",
@@ -458,6 +463,11 @@ const EN: Dict = {
   "eval.colScore": "Score",
   "eval.colThreshold": "Threshold",
   "eval.colStatus": "Status",
+  "eval.usage": "Token usage for this run",
+  "eval.tokensIn": "input",
+  "eval.tokensOut": "output",
+  "eval.caseLawNote":
+    "For case law, Context Precision structurally understates: parent-document retrieval returns several valid decisions for the same legal question, which are scored 'not useful' against a single reference answer. Hit-Rate@k and MRR are the more reliable, judge-free retrieval signals.",
 
   // Login
   "login.subtitle": "Please sign in with your account.",

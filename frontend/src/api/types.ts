@@ -151,9 +151,17 @@ export interface Finding {
   sources: Source[];
 }
 
+export interface EvalUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  by_model: Record<string, Record<string, number>>;
+}
+
 export interface EvalScores {
   agent: Record<string, number>;
   retrieval: Record<string, Record<string, number>>;
+  usage?: EvalUsage;
 }
 
 export interface EvalStatus {
