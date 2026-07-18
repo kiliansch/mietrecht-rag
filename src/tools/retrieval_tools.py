@@ -60,14 +60,21 @@ def _case_law_header(doc: Document) -> str:
     return " – ".join(parts) if parts else "Gerichtsentscheidung"
 
 
-def _snippet(index: int, label: str, header: str, url: str, content: str) -> str:
+def _snippet(
+    index: int,
+    label: str,
+    header: str,
+    url: str,
+    content: str,
+    max_chars: int = config.RETRIEVAL_SNIPPET_MAX_CHARS,
+) -> str:
     # Header/url are retrieved metadata (untrusted) — sanitise them too, not just the
     # body, so a forged role header/delimiter in a scraped field can't inject. The
     # header keeps its own parentheses (the greedy citation regex tolerates them);
     # only the url is stripped of parens, since it is the regex's closing delimiter.
     safe_header = sanitise_text(header, _HEADER_MAX_CHARS)
     safe_url = sanitise_text(url, _URL_MAX_CHARS).replace("(", "").replace(")", "")
-    text = sanitise_text(content, config.RETRIEVAL_SNIPPET_MAX_CHARS)
+    text = sanitise_text(content, max_chars)
     return f"### Quelle {index} [{label}]: {safe_header} ({safe_url})\n{text}"
 
 
@@ -107,6 +114,7 @@ def search_law(query: str) -> str:
                 _snippet(
                     index, _LABEL_CASE_LAW, _case_law_header(doc),
                     str(doc.metadata.get("url", "")).rstrip("/"), doc.page_content,
+                    max_chars=config.CASE_LAW_PARENT_SNIPPET_MAX_CHARS,
                 )
             )
             index += 1

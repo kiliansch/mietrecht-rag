@@ -52,12 +52,40 @@ def cmd_ingest_statutes(args: argparse.Namespace) -> None:
 
 def cmd_ingest_case_law(args: argparse.Namespace) -> None:
     """Run the ingest-case-law subcommand: filter, chunk and embed court decisions."""
-    from src.ingest.case_law import ingest_case_law
+    from src.ingest.case_law import estimate_case_law_ingestion, ingest_case_law
+
+    if args.dry_run:
+        # Cost gate: size the run (kept decisions, child tokens, projected $) with no
+        # embedding and no DB writes, so spend can be confirmed before the paid run.
+        report = estimate_case_law_ingestion(
+            dump_path=args.dump_path,
+            max_decisions=args.max_decisions,
+            contextual=args.contextual,
+        )
+        print(
+            f"Filter: {report['total']} decisions read, {report['regex_matches']} regex "
+            f"matches, {report['keyword_matches']} keyword matches, {report['relevant']} "
+            f"relevant, {report['kept']} kept."
+        )
+        print(
+            f"Dry run{' (contextual)' if args.contextual else ''}: {report['child_chunks']} "
+            f"child chunks / {report['parent_sections']} parents, "
+            f"{report['child_tokens']:,} child tokens to embed."
+        )
+        if args.contextual:
+            print(
+                f"Projected cost: embedding ${report['embedding_usd']:.2f} + generation "
+                f"${report['generation_usd']:.2f} = ${report['projected_usd']:.2f} (no data written)."
+            )
+        else:
+            print(f"Projected embedding cost: ${report['projected_usd']:.2f} (no data written).")
+        return
 
     report = ingest_case_law(
         dump_path=args.dump_path,
         max_decisions=args.max_decisions,
         force=args.force,
+        contextual=args.contextual,
     )
     if "total" in report:
         print(
@@ -177,6 +205,23 @@ def main() -> None:
     )
     ingest_case_law_parser.add_argument(
         "--force", action="store_true", help="Clear and re-ingest even if already populated."
+    )
+    ingest_case_law_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Size the run without embedding or writing anything: print kept "
+            "decisions, child chunks/tokens and projected embedding cost (the cost gate)."
+        ),
+    )
+    ingest_case_law_parser.add_argument(
+        "--contextual",
+        action="store_true",
+        help=(
+            "Contextual retrieval: prepend an LLM-generated per-decision context blurb to "
+            "each child chunk before embedding + FTS (adds generation spend; --dry-run "
+            "projects embedding + generation cost)."
+        ),
     )
 
     ask_parser = subparsers.add_parser("ask", help="Ask the agent a single question (ephemeral thread).")

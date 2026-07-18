@@ -7,6 +7,7 @@ hardcode sizes here.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -26,12 +27,28 @@ def get_statute_splitter() -> RecursiveCharacterTextSplitter:
     )
 
 
-def get_case_law_splitter() -> RecursiveCharacterTextSplitter:
-    """Return the token-aware splitter for within-section case-law chunks."""
+def get_case_law_parent_splitter() -> RecursiveCharacterTextSplitter:
+    """Return the token-aware splitter for the larger case-law PARENT windows.
+
+    Parents are the context unit returned by retrieval (never re-embedded), so a
+    coarser size with no overlap is used.
+    """
     return RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         encoding_name=config.TOKENIZER,
-        chunk_size=config.CASE_LAW_CHUNK_TOKENS,
-        chunk_overlap=config.CASE_LAW_CHUNK_OVERLAP,
+        chunk_size=config.CASE_LAW_PARENT_CHUNK_TOKENS,
+        chunk_overlap=config.CASE_LAW_PARENT_CHUNK_OVERLAP,
+    )
+
+
+def get_case_law_child_splitter() -> RecursiveCharacterTextSplitter:
+    """Return the token-aware splitter for the small case-law CHILD chunks.
+
+    Children are the precise unit that gets embedded + FTS-indexed.
+    """
+    return RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+        encoding_name=config.TOKENIZER,
+        chunk_size=config.CASE_LAW_CHILD_CHUNK_TOKENS,
+        chunk_overlap=config.CASE_LAW_CHILD_CHUNK_OVERLAP,
     )
 
 
@@ -62,14 +79,39 @@ def split_by_heading(markdown: str) -> list[tuple[str, str]]:
     return sections
 
 
-def chunk_case_law_text(markdown: str) -> list[tuple[str, str]]:
-    """Heading-aware then token-bound chunking of a court decision.
+@dataclass(frozen=True)
+class ParentUnit:
+    """One parent window of a court decision and the child chunks embedded from it.
 
-    Returns a list of `(section_heading, chunk_text)` pairs.
+    `parent_idx` is the running index of this parent across the whole decision
+    (used to build a stable `parent_id`); `children` are the small chunks that get
+    embedded, while `parent_text` is the larger context returned at retrieval time.
     """
-    splitter = get_case_law_splitter()
-    result: list[tuple[str, str]] = []
+
+    section_heading: str
+    parent_idx: int
+    parent_text: str
+    children: list[str]
+
+
+def chunk_case_law_hierarchical(markdown: str) -> list[ParentUnit]:
+    """Heading-aware, two-level (parent-document) chunking of a court decision.
+
+    For each `(heading, section_text)` from `split_by_heading`, the section is first
+    split into larger PARENT windows, then each parent is split into small CHILD
+    chunks. Parents are indexed sequentially across the whole decision so a stable
+    `{doc_id}_{parent_idx}` key can be formed downstream. Parents with no non-empty
+    children are dropped.
+    """
+    parent_splitter = get_case_law_parent_splitter()
+    child_splitter = get_case_law_child_splitter()
+    units: list[ParentUnit] = []
+    parent_idx = 0
     for heading, text in split_by_heading(markdown):
-        for chunk in splitter.split_text(text):
-            result.append((heading, chunk))
-    return result
+        for parent_text in parent_splitter.split_text(text):
+            children = [c for c in child_splitter.split_text(parent_text) if c.strip()]
+            if not children:
+                continue
+            units.append(ParentUnit(heading, parent_idx, parent_text, children))
+            parent_idx += 1
+    return units

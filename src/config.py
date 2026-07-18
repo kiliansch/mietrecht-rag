@@ -51,6 +51,10 @@ CASE_LAW_COLLECTION = "case_law"
 # is used here to keep vector indexing available while retaining strong quality.
 EMBEDDING_MODEL = "text-embedding-3-large"
 EMBEDDING_DIM = 1536
+# Per-1M-token price (USD) for EMBEDDING_MODEL — used ONLY by the case-law
+# ingestion dry-run to project embedding spend before the paid run (no other
+# code path spends on embeddings). Verify against the live catalogue.
+EMBEDDING_PRICE_PER_1M = 0.13
 # Small embedding model used only for RAGAs answer-similarity metrics, never for storage.
 RAGAS_EMBEDDING_MODEL = "text-embedding-3-small"
 
@@ -60,9 +64,18 @@ RAGAS_EMBEDDING_MODEL = "text-embedding-3-small"
 TOKENIZER = "cl100k_base"
 STATUTE_CHUNK_TOKENS = 320
 STATUTE_CHUNK_OVERLAP = 64
-# Court reasoning runs long; case-law chunks are larger than statute chunks.
-CASE_LAW_CHUNK_TOKENS = 640
-CASE_LAW_CHUNK_OVERLAP = 96
+# Case-law uses parent-document (small-to-big) chunking: small CHILD chunks are the
+# precise unit that gets embedded + FTS-indexed, while the larger PARENT window is
+# what retrieval returns for context (see src.retrieval.hybrid._ParentExpandingRetriever).
+# Children are smaller than statute chunks so near-identical siblings in a long
+# decision compete on a finer grain; the parent restores the surrounding reasoning.
+CASE_LAW_CHILD_CHUNK_TOKENS = 320
+CASE_LAW_CHILD_CHUNK_OVERLAP = 64
+# Court reasoning runs long; the parent window is capped so one huge
+# "Entscheidungsgründe" section cannot dominate a returned slot. No overlap: parents
+# are retrieved by id (never re-embedded), so boundary continuity does not matter.
+CASE_LAW_PARENT_CHUNK_TOKENS = 1024
+CASE_LAW_PARENT_CHUNK_OVERLAP = 0
 
 # --- Retrieval ---
 RETRIEVAL_K = 6
@@ -72,10 +85,90 @@ RETRIEVAL_K = 6
 # tool calls (6 statutes + 6 case-law); precision has ample headroom after reranking.
 SEARCH_LAW_PER_CORPUS_K = RETRIEVAL_K
 # (dense_weight, lexical_weight) for EnsembleRetriever reciprocal rank fusion.
-ENSEMBLE_WEIGHTS = (0.5, 0.5)
+# Env-overridable ("dense,lexical", e.g. "0.4,0.6") so the precision sweep can favour
+# the lexical side (legal text is keyword-driven) without a code edit.
+ENSEMBLE_WEIGHTS = tuple(  # type: ignore[assignment]
+    float(w) for w in os.environ.get("ENSEMBLE_WEIGHTS", "0.5,0.5").split(",")
+)
 # Per-snippet cap (after sanitisation) for retrieval-tool output, keeping the
 # untrusted context fed back to the model bounded.
 RETRIEVAL_SNIPPET_MAX_CHARS = 1500
+# Relaxed per-snippet cap for CASE-LAW parent sections in `search_law`: a returned
+# parent window (see CASE_LAW_PARENT_CHUNK_TOKENS) is deliberately larger than a
+# statute snippet, so it gets its own higher bound. Statutes keep the tighter cap.
+CASE_LAW_PARENT_SNIPPET_MAX_CHARS = 3000
+
+# --- Case-law parent-document (small-to-big) retrieval ---
+# Feature toggle (env-overridable) so the parent-expansion change can be A/B-measured
+# against the child-chunk baseline without a re-ingestion or a code edit: retrieval
+# reads this at call time. "0"/"false"/"no" disable it; anything else (default) enables.
+# Kept ON: the A/B (docs/parent_document_retrieval_eval.md) showed case-law
+# context_recall 0.567 -> 0.800 for a -0.048 precision trade on the n=20 eval set.
+CASE_LAW_PARENT_EXPANSION = os.environ.get("CASE_LAW_PARENT_EXPANSION", "1").lower() not in (
+    "0",
+    "false",
+    "no",
+)
+# How many reranked CHILD chunks to consider before de-duplicating up to
+# CASE_LAW_PARENT_K distinct PARENTS. Wider than the returned count because several top
+# children often share one parent; this leaves enough distinct parents to fill the slots.
+CASE_LAW_CHILD_FANOUT_K = 12
+# How many distinct PARENT sections the case-law retriever returns. Fewer parents ->
+# higher precision (the lowest-ranked, least-relevant contexts drop out) at some recall
+# cost; env-overridable so this precision/recall trade can be swept. Defaults to
+# RETRIEVAL_K (parity with the statute side).
+CASE_LAW_PARENT_K = int(os.environ.get("CASE_LAW_PARENT_K", str(RETRIEVAL_K)))
+# Rerank the assembled PARENT sections against the query before returning the top
+# CASE_LAW_PARENT_K. Children are reranked to pick WHICH decisions; this second pass
+# orders the whole parent sections by relevance so the most on-point ruling lands at
+# rank 1 (context_precision is rank-weighted, so ordering matters). Env-overridable.
+CASE_LAW_PARENT_RERANK = os.environ.get("CASE_LAW_PARENT_RERANK", "1").lower() not in (
+    "0",
+    "false",
+    "no",
+)
+# Non-embedded table holding the larger parent sections, keyed by parent_id and
+# joined in at retrieval time (children live in CASE_LAW_COLLECTION as usual).
+CASE_LAW_PARENTS_TABLE = "case_law_parents"
+
+# --- Case-law query-time precision levers (all env-overridable, case-law only) ---
+# Court-level metadata narrowing: when the query names a higher court (BGH / BVerfG /
+# "höchstrichterlich"), restrict to that court level (mirrors the statute §-narrowing),
+# with a fallback to the unfiltered pool so it can never zero out recall.
+CASE_LAW_COURT_FILTER = os.environ.get("CASE_LAW_COURT_FILTER", "0").lower() not in (
+    "0",
+    "false",
+    "no",
+)
+# Multi-query: one LLM call expands the question into several German query variants; the
+# case-law ensemble runs for each and the results are fused before reranking. Adds a
+# per-`search_law` LLM call (latency), so it is a deliberate on/off choice.
+CASE_LAW_MULTI_QUERY = os.environ.get("CASE_LAW_MULTI_QUERY", "0").lower() not in (
+    "0",
+    "false",
+    "no",
+)
+# Number of query variants the multi-query expander generates (the original question is
+# always included in addition to these).
+MULTI_QUERY_N = int(os.environ.get("MULTI_QUERY_N", "3"))
+# Cheap/fast model for the multi-query expansion (bounds the added per-query latency).
+MULTI_QUERY_MODEL = os.environ.get("MULTI_QUERY_MODEL", "google/gemini-2.5-flash")
+
+# --- Case-law contextual retrieval (ingestion-time) ---
+# When ingesting with --contextual, one LLM call per DECISION generates a short German
+# context blurb (court, Az, date, one-sentence gist) that is prepended to each CHILD
+# chunk before embedding + FTS (the parent text the model reads stays clean). This
+# situates otherwise-ambiguous fragments so the reranker can surface the right decision.
+CONTEXTUAL_MODEL = os.environ.get("CONTEXTUAL_MODEL", "google/gemini-2.5-flash")
+# How much of the decision text (chars) to feed the context generator — enough to cover
+# Tenor / Leitsatz / start of the reasoning without paying for the whole ruling.
+CONTEXTUAL_SOURCE_MAX_CHARS = int(os.environ.get("CONTEXTUAL_SOURCE_MAX_CHARS", "6000"))
+# Client-side concurrency for the per-decision generation calls (bounds wall-clock time
+# over ~15.6k decisions without hammering the provider).
+CONTEXTUAL_MAX_WORKERS = int(os.environ.get("CONTEXTUAL_MAX_WORKERS", "12"))
+# Per-1M-token price (input, output) for CONTEXTUAL_MODEL — used only by the dry-run to
+# project the context-generation spend (the re-embedding spend uses EMBEDDING_PRICE_PER_1M).
+CONTEXTUAL_MODEL_PRICE_PER_1M = (0.15, 0.60)
 
 # --- Reranking ---
 # OpenRouter exposes rerank models on a dedicated endpoint (POST
@@ -84,8 +177,9 @@ RETRIEVAL_SNIPPET_MAX_CHARS = 1500
 # from the same decision compete for the same RETRIEVAL_K slot.
 RERANK_MODEL = "cohere/rerank-4-fast"
 # Wider per-sub-retriever pool fetched before fusion+reranking; RETRIEVAL_K stays
-# the final count returned after reranking.
-RERANK_CANDIDATE_K = 20
+# the final count returned after reranking. Env-overridable so the precision sweep can
+# widen the candidate pool (more choices for the reranker -> tighter top-k).
+RERANK_CANDIDATE_K = int(os.environ.get("RERANK_CANDIDATE_K", "20"))
 
 # --- Case-law ingestion ---
 # Path to the local Open Legal Data court-decisions dump (parquet shards). No default:
@@ -137,6 +231,15 @@ THRESHOLDS = {
     "answer_relevancy": 0.75,
     "context_precision": 0.90,
     "context_recall": 0.75,
+    # Deterministic, judge-free case-law retrieval metrics (see src.eval.runner): does the
+    # retriever surface the specific gold decision (hit_rate@k) and rank it high (MRR)?
+    # These complement the LLM RAGAs metrics, which — with parent-document retrieval
+    # returning several valid decisions per query against a single-sentence ground truth —
+    # structurally understate precision. Targets reflect that a single hand-picked gold is
+    # a floor (equally valid rulings can be surfaced instead). Non-case-law tables report
+    # these as N/A.
+    "hit_rate": 0.75,
+    "mrr": 0.60,
 }
 
 # --- LLM model choices for UI selector ---

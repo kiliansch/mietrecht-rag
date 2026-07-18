@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import Any
 
 import psycopg
 from langchain_openai import OpenAIEmbeddings
@@ -17,6 +18,7 @@ from langchain_postgres.v2.indexes import HNSWIndex
 from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.store.postgres import PostgresStore
 from psycopg import sql
+from psycopg.types.json import Jsonb
 from pydantic import SecretStr
 
 from src import config
@@ -111,6 +113,21 @@ def _ensure_collection_meta_table(conn: psycopg.Connection) -> None:
     )
 
 
+def _ensure_case_law_parents_table(conn: psycopg.Connection) -> None:
+    """Non-embedded store for the larger case-law parent sections (small-to-big
+    retrieval). Children are embedded in the `case_law` collection and carry a
+    `parent_id`; the parent text is fetched by id at retrieval time."""
+    conn.execute(
+        sql.SQL(
+            "CREATE TABLE IF NOT EXISTS {table} ("
+            "  parent_id TEXT PRIMARY KEY,"
+            "  content TEXT NOT NULL,"
+            "  metadata JSONB NOT NULL DEFAULT '{{}}'::jsonb"
+            ")"
+        ).format(table=sql.Identifier(config.CASE_LAW_PARENTS_TABLE))
+    )
+
+
 def _ensure_app_tables(conn: psycopg.Connection) -> None:
     """Application tables (auth + cases). Real SQL tables, unlike the KV memory store,
     because they need relational queries (per-user listings, due-date ordering)."""
@@ -200,6 +217,7 @@ def setup_db() -> None:
         conn.autocommit = True
         conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
         _ensure_collection_meta_table(conn)
+        _ensure_case_law_parents_table(conn)
         _ensure_app_tables(conn)
 
     try:
@@ -278,3 +296,42 @@ def clear_collection(collection: str) -> None:
         conn.autocommit = True
         if _table_exists(conn, collection):
             conn.execute(sql.SQL("TRUNCATE TABLE {table}").format(table=sql.Identifier(collection)))
+
+
+def clear_case_law_parents() -> None:
+    """Truncate the case-law parent store (used by --force re-ingestion of case_law)."""
+    with get_connection() as conn:
+        conn.autocommit = True
+        if _table_exists(conn, config.CASE_LAW_PARENTS_TABLE):
+            conn.execute(
+                sql.SQL("TRUNCATE TABLE {table}").format(
+                    table=sql.Identifier(config.CASE_LAW_PARENTS_TABLE)
+                )
+            )
+
+
+def upsert_case_law_parents(rows: list[tuple[str, str, dict[str, Any]]]) -> None:
+    """Insert/replace parent rows `(parent_id, content, metadata)` into the parent store."""
+    if not rows:
+        return
+    stmt = sql.SQL(
+        "INSERT INTO {table} (parent_id, content, metadata) VALUES (%s, %s, %s) "
+        "ON CONFLICT (parent_id) DO UPDATE SET "
+        "content = EXCLUDED.content, metadata = EXCLUDED.metadata"
+    ).format(table=sql.Identifier(config.CASE_LAW_PARENTS_TABLE))
+    with get_connection() as conn:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.executemany(stmt, [(pid, content, Jsonb(meta)) for pid, content, meta in rows])
+
+
+def fetch_case_law_parents(parent_ids: list[str]) -> dict[str, tuple[str, dict[str, Any]]]:
+    """Return `{parent_id: (content, metadata)}` for the given ids (one round-trip)."""
+    if not parent_ids:
+        return {}
+    stmt = sql.SQL(
+        "SELECT parent_id, content, metadata FROM {table} WHERE parent_id = ANY(%s)"
+    ).format(table=sql.Identifier(config.CASE_LAW_PARENTS_TABLE))
+    with get_connection() as conn:
+        rows = conn.execute(stmt, (parent_ids,)).fetchall()
+    return {pid: (content, dict(meta or {})) for pid, content, meta in rows}
