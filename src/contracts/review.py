@@ -8,7 +8,7 @@ All clause text is treated as UNTRUSTED (OWASP LLM05).
 from __future__ import annotations
 
 import re
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from src.agent import graph as agent_graph
 from src.agent.security import delimit, sanitise_text
@@ -44,8 +44,12 @@ def review_clause(
     thread_id: str,
     user_name: str,
     role: str = "mieter",
+    usage_cb: Any = None,
 ) -> Finding:
-    """Review a single clause. Sanitises + delimits the text, calls the agent."""
+    """Review a single clause. Sanitises + delimits the text, calls the agent.
+
+    `usage_cb`, when given, aggregates this clause's LLM usage into the shared handler.
+    """
     sanitised = sanitise_text(clause["text"], max_chars=_CONTRACT_SNIPPET_MAX)
     delimited = delimit(sanitised, "contract_clause")
     heading_hint = f"Klausel: {clause['heading']}\n\n" if clause["heading"] else ""
@@ -59,6 +63,7 @@ def review_clause(
         thread_id=thread_id,
         user_name=user_name,
         role=role,
+        callbacks=[usage_cb] if usage_cb is not None else None,
     )
     sources: list[dict] = []
     for output in tool_outputs:

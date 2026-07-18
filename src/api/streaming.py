@@ -35,17 +35,25 @@ def agent_sse_events(
     updates: Iterator[dict[str, Any]],
     *,
     on_final: Callable[[str], None] | None = None,
+    usage_cb: Any = None,
 ) -> Iterator[str]:
     """Map graph updates to SSE frames; ends with `done` (or `error`).
 
     `on_final` receives the final answer text (used to persist analysis results
     after the stream has been fully delivered).
 
+    `usage_cb` (a `UsageMetadataCallbackHandler` attached to the same run) lets the
+    stream reconcile total usage at the end: the per-agent-node `usage` events below
+    only cover the agent's own messages, so tokens spent *inside* tools (e.g.
+    multi-query expansion during `search_law`) are emitted as one final `usage` delta.
+
     Approval interrupts (`langgraph.types.interrupt` inside a gated tool) surface as
     an `approval_required` event followed by `done {"paused": true}` — the HTTP
     stream ends while the thread stays parked in the checkpointer until
     `/api/chat/resume` continues it.
     """
+    emitted_input = 0
+    emitted_output = 0
     try:
         for update in updates:
             if "__interrupt__" in update:
@@ -66,12 +74,13 @@ def agent_sse_events(
                     if node_name == "agent":
                         usage = getattr(msg, "usage_metadata", None) or {}
                         if usage:
+                            in_tok = usage.get("input_tokens", 0)
+                            out_tok = usage.get("output_tokens", 0)
+                            emitted_input += in_tok
+                            emitted_output += out_tok
                             yield sse_event(
                                 "usage",
-                                {
-                                    "input_tokens": usage.get("input_tokens", 0),
-                                    "output_tokens": usage.get("output_tokens", 0),
-                                },
+                                {"input_tokens": in_tok, "output_tokens": out_tok},
                             )
                         if getattr(msg, "tool_calls", None):
                             for tc in msg.tool_calls:
@@ -97,6 +106,18 @@ def agent_sse_events(
                                 yield sse_event("source", src)
                     elif node_name == "validate_input":
                         yield sse_event("final", {"content": str(msg.content)})
+        # Reconcile: emit any usage captured by the callback (agent + tools) beyond what
+        # the per-agent-node events already reported — i.e. tool-internal LLM usage.
+        if usage_cb is not None:
+            total = getattr(usage_cb, "usage_metadata", {}) or {}
+            total_input = sum(u.get("input_tokens", 0) for u in total.values())
+            total_output = sum(u.get("output_tokens", 0) for u in total.values())
+            delta_input = max(total_input - emitted_input, 0)
+            delta_output = max(total_output - emitted_output, 0)
+            if delta_input or delta_output:
+                yield sse_event(
+                    "usage", {"input_tokens": delta_input, "output_tokens": delta_output}
+                )
         yield sse_event("done", {})
     except Exception as exc:  # noqa: BLE001 — report any failure to the client as SSE
         logger.exception("Unhandled exception during agent stream")

@@ -331,4 +331,446 @@ EVAL_DATASET: list[dict[str, Any]] = [
         "collection": config.CASE_LAW_COLLECTION,
         "notes": "BGH VIII ZR 21/13 — Schönheitsreparaturen bei unrenoviert übergebener Wohnung.",
     },
+    # --- Additional case-law questions (expand the case-law eval set to n=20 so the
+    # case-law retrieval metrics are statistically meaningful; each item is grounded
+    # in a decision present in the ingested corpus, cited in `notes`). ---
+    {
+        "question": (
+            "Ist eine formularmäßige Quotenabgeltungsklausel für Schönheitsreparaturen "
+            "wirksam, und was folgt aus ihrer Unwirksamkeit für die übrigen "
+            "Schönheitsreparaturklauseln im Mietvertrag?"
+        ),
+        "answer": (
+            "Eine formularmäßige Quotenabgeltungsklausel ist unwirksam. Nach dem "
+            "Prinzip der Gesamtinfektion erfasst die Unwirksamkeit einer "
+            "Schönheitsreparaturklausel die gesamte Überbürdung der "
+            "Schönheitsreparaturen auf den Mieter."
+        ),
+        "ground_truth": (
+            "Die Quotenabgeltungsklausel ist unwirksam. Wegen des Verbots der "
+            "geltungserhaltenden Reduktion und des Prinzips der Gesamtinfektion "
+            "schlägt die Unwirksamkeit auf die gesamte formularmäßige Überbürdung "
+            "der Schönheitsreparaturen durch, sodass diese insgesamt unwirksam ist "
+            "(AG Blomberg, Urteil vom 24.01.2023, 4 C 111/22)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§535", "§307"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "AG Blomberg 4 C 111/22 — Quotenabgeltungsklausel / Gesamtinfektion.",
+    },
+    {
+        "question": (
+            "Gilt die einjährige Abrechnungsfrist mit Ausschlusswirkung für "
+            "Betriebskosten (§556 Abs. 3 BGB) auch für die Gewerberaummiete?"
+        ),
+        "answer": (
+            "Nein. Die Ausschlussfrist des §556 Abs. 3 Satz 3 BGB gilt nur für die "
+            "Wohnraummiete, nicht für die Gewerberaummiete."
+        ),
+        "ground_truth": (
+            "Die Ausschlussfrist des §556 Abs. 3 Satz 3 BGB findet bei der "
+            "Gewerberaummiete keine Anwendung; ebenso wenig gilt die "
+            "Einwendungsausschlussfrist des §556 Abs. 3 Satz 6 BGB, da diese "
+            "Vorschriften nur auf die Wohnraummiete anwendbar sind (BGH, Urteil vom "
+            "28.05.2014, XII ZR 6/13)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§556", "§556 Abs. 3"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "BGH XII ZR 6/13 — Ausschlussfrist §556 Abs. 3 BGB nur bei Wohnraum.",
+    },
+    {
+        "question": (
+            "Innerhalb welcher Frist muss der Vermieter nach Beendigung des "
+            "Mietverhältnisses über die Kaution abrechnen, und darf er einen Teil "
+            "wegen einer noch ausstehenden Betriebskostenabrechnung einbehalten?"
+        ),
+        "answer": (
+            "Dem Vermieter steht eine angemessene Prüfungsfrist zu, die regelmäßig "
+            "mit etwa sechs Monaten bemessen wird. Er darf einen angemessenen Teil "
+            "der Kaution zur Sicherung einer Nachforderung aus einer noch zu "
+            "erstellenden Betriebskostenabrechnung einbehalten."
+        ),
+        "ground_truth": (
+            "Der Kautionsrückzahlungsanspruch wird nach Ablauf einer angemessenen "
+            "Prüfungsfrist fällig, die nach der Rechtsprechung mit etwa sechs "
+            "Monaten zu bemessen ist; der Vermieter darf einen Teil der Kaution zur "
+            "Sicherung einer Nachforderung aus einer noch zu erstellenden "
+            "Betriebskostenabrechnung einbehalten (AG Neuss, Urteil vom 12.07.1991, "
+            "36 C 122/91)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§551"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "AG Neuss 36 C 122/91 — Kaution: Prüfungsfrist ~6 Monate, Einbehalt für BK.",
+    },
+    {
+        "question": (
+            "Heilt eine Schonfristzahlung nach §569 Abs. 3 Nr. 2 BGB auch eine "
+            "hilfsweise ausgesprochene ordentliche Kündigung wegen Zahlungsverzugs?"
+        ),
+        "answer": (
+            "Grundsätzlich nein. Die Schonfristzahlung beseitigt nur die "
+            "außerordentliche fristlose Kündigung, nicht die hilfsweise erklärte "
+            "ordentliche Kündigung."
+        ),
+        "ground_truth": (
+            "Die Schonfristzahlung gemäß §569 Abs. 3 Nr. 2 BGB erfasst grundsätzlich "
+            "nur die außerordentliche Kündigung wegen Zahlungsverzugs, nicht die "
+            "hilfsweise ausgesprochene ordentliche Kündigung; etwas anderes gilt nur "
+            "ausnahmsweise nach Treu und Glauben (§242 BGB) bei besonderen Umständen "
+            "(AG Tempelhof-Kreuzberg, Urteil vom 23.10.2019, 15 C 83/19)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§569", "§569 Abs. 3", "§543"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "AG Tempelhof-Kreuzberg 15 C 83/19 — Schonfristzahlung heilt nur die a.o. Kündigung.",
+    },
+    {
+        "question": (
+            "Wie lange im Voraus muss der Vermieter eine Modernisierungsmaßnahme "
+            "ankündigen, bevor der Mieter sie dulden muss?"
+        ),
+        "answer": (
+            "Die Modernisierung ist dem Mieter spätestens drei Monate vor ihrem "
+            "Beginn in Textform anzukündigen (§555c Abs. 1 BGB)."
+        ),
+        "ground_truth": (
+            "Die Modernisierungsankündigung hat spätestens drei Monate vor Beginn "
+            "der Maßnahme zu erfolgen; diese Frist besteht seit dem "
+            "Mietrechtsreformgesetz 2001 (damals §554 Abs. 3 BGB a.F., heute §555c "
+            "Abs. 1 BGB) inhaltlich unverändert fort (BGH, Urteil vom 18.03.2021, "
+            "VIII ZR 305/19)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§555c", "§555d"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "BGH VIII ZR 305/19 — Modernisierungsankündigung: 3-Monats-Frist.",
+    },
+    {
+        "question": (
+            "Setzt der Anspruch des Mieters auf Erlaubnis zur Untervermietung nach "
+            "§553 Abs. 1 BGB voraus, dass das berechtigte Interesse erst nach "
+            "Abschluss des Mietvertrags entstanden ist?"
+        ),
+        "answer": (
+            "Ja. Das berechtigte Interesse an der Untervermietung muss nach Abschluss "
+            "des Mietvertrags entstanden sein; der bloße Wunsch, einen Dritten "
+            "aufzunehmen, genügt nicht."
+        ),
+        "ground_truth": (
+            "Voraussetzung des Anspruchs auf Erlaubnis zur Untervermietung nach "
+            "§553 Abs. 1 BGB ist ein berechtigtes (wirtschaftliches oder "
+            "persönliches) Interesse des Mieters, das erst nach Abschluss des "
+            "Mietvertrags entstanden sein muss; der bloße Wunsch zur Aufnahme eines "
+            "Dritten reicht nicht aus (AG München, Urteil vom 20.12.2022, "
+            "411 C 10539/22)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§553", "§553 Abs. 1"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "AG München 411 C 10539/22 — Untervermietung §553: Interesse nach Vertragsschluss.",
+    },
+    {
+        "question": (
+            "Ist eine Formularklausel wirksam, die dem Mieter die Haltung von Hunden "
+            "und Katzen generell verbietet?"
+        ),
+        "answer": (
+            "Nein. Ein generelles formularmäßiges Verbot der Hunde- und Katzenhaltung "
+            "ohne Möglichkeit einer Interessenabwägung benachteiligt den Mieter "
+            "unangemessen und ist nach §307 BGB unwirksam."
+        ),
+        "ground_truth": (
+            "Eine Formularklausel, die die Haltung von Hunden und Katzen generell "
+            "ohne jede Möglichkeit einer Interessenabwägung verbietet, benachteiligt "
+            "den Mieter unangemessen und ist gemäß §307 Abs. 1, 2 BGB unwirksam; die "
+            "Tierhaltung ist dann vertragsgemäßer Gebrauch i.S.d. §535 Abs. 1 BGB "
+            "(AG Köln, Urteil vom 09.08.2012, 210 C 103/12)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§535", "§307"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "AG Köln 210 C 103/12 — generelles Tierhaltungsverbot (Formularklausel) unwirksam.",
+    },
+    {
+        "question": (
+            "Unter welchen Voraussetzungen ist eine formularmäßige "
+            "Kleinreparaturklausel wirksam?"
+        ),
+        "answer": (
+            "Eine Kleinreparaturklausel ist nur wirksam, wenn sie gegenständlich auf "
+            "dem Zugriff des Mieters häufig ausgesetzte Teile beschränkt ist und "
+            "sowohl für die einzelne Reparatur als auch für einen bestimmten "
+            "Zeitraum eine zumutbare Höchstgrenze enthält."
+        ),
+        "ground_truth": (
+            "Eine Kleinreparaturklausel ist nur dann wirksam, wenn sie einerseits "
+            "gegenständlich auf Teile der Mietsache beschränkt ist, die häufig dem "
+            "Zugriff des Mieters ausgesetzt sind, und andererseits eine im Rahmen "
+            "des Zumutbaren bestimmte Höchstgrenze enthält – sowohl je Einzelfall "
+            "als auch für die Summe innerhalb eines bestimmten Zeitraums (LG Köln, "
+            "Urteil vom 04.11.2004, 6 S 36/04, unter Verweis auf BGH NJW 1991, 628)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§535", "§307"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "LG Köln 6 S 36/04 — Kleinreparaturklausel: Beschränkung + Höchstgrenze.",
+    },
+    {
+        "question": (
+            "Kann der Mieter Schadensersatz verlangen, wenn sich eine "
+            "Eigenbedarfskündigung nachträglich als vorgeschoben herausstellt?"
+        ),
+        "answer": (
+            "Ja. Eine vorgeschobene Eigenbedarfskündigung ist pflichtwidrig; dem "
+            "Mieter stehen Schadensersatzansprüche zu, auch wenn er auf die Angaben "
+            "des Vermieters vertraut und freiwillig ausgezogen ist."
+        ),
+        "ground_truth": (
+            "Ist der Eigenbedarf vorgeschoben, ist die Kündigung pflichtwidrig und "
+            "der Vermieter dem Mieter zum Schadensersatz verpflichtet (§§535, 280 "
+            "Abs. 1 BGB). Die Kausalität besteht auch dann, wenn der Mieter im "
+            "Vertrauen auf die Angaben des Vermieters freiwillig ausgezogen ist, "
+            "ohne Anlass zu Misstrauen zu haben (LG Kassel, Urteil vom 23.11.2023, "
+            "1 S 222/22)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§573", "§280"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "LG Kassel 1 S 222/22 — Schadensersatz bei vorgeschobenem Eigenbedarf.",
+    },
+    {
+        "question": (
+            "Wie kann ein Mieter geltend machen, dass seine Miete gegen die "
+            "Mietpreisbremse verstößt, und was ist Rechtsfolge eines Verstoßes?"
+        ),
+        "answer": (
+            "Der Mieter kann einen Verstoß gegen die Mietpreisbremse rügen und die "
+            "Feststellung der höchstzulässigen Miete verlangen; zulässig ist "
+            "höchstens die ortsübliche Vergleichsmiete zuzüglich 10 Prozent."
+        ),
+        "ground_truth": (
+            "Der Mieter kann gegenüber dem Vermieter einen Verstoß gegen die "
+            "Mietpreisbremse rügen und die Feststellung der höchstzulässigen Miete "
+            "begehren; diese bemisst sich nach der ortsüblichen Vergleichsmiete "
+            "(z. B. anhand des Mietspiegels) zuzüglich höchstens 10 Prozent "
+            "(§§556d, 556g BGB; LG Berlin, Urteil vom 07.12.2017, 67 S 218/17)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§556d", "§556g"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "LG Berlin 67 S 218/17 — Mietpreisbremse: Rüge und höchstzulässige Miete.",
+    },
+    {
+        "question": (
+            "Unter welchen Voraussetzungen kann das Gericht wegen einer "
+            "Suizidgefahr des Mieters Vollstreckungsschutz gegen eine "
+            "Räumungsvollstreckung gewähren?"
+        ),
+        "answer": (
+            "Bei konkreter Suizid- oder schwerer Gesundheitsgefahr kann nach §765a "
+            "ZPO Räumungsschutz gewährt werden, wenn die Räumung eine mit den guten "
+            "Sitten nicht zu vereinbarende Härte darstellt; die grundrechtlich "
+            "geschützten Rechtsgüter Leben und Gesundheit sind zu berücksichtigen."
+        ),
+        "ground_truth": (
+            "Nach §765a ZPO ist Räumungsschutz zu gewähren, wenn die Vollstreckung "
+            "wegen einer konkreten Gefahr für Leben und Gesundheit – etwa einer "
+            "ernsthaften Suizidgefahr – eine mit den guten Sitten nicht zu "
+            "vereinbarende Härte darstellt; die Gerichte müssen die grundrechtlich "
+            "geschützten Belange des Schuldners hinreichend würdigen (BVerfG, "
+            "Beschluss vom 23.03.2023, 2 BvR 1507/22)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§765a ZPO"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "BVerfG 2 BvR 1507/22 — Räumungsschutz §765a ZPO bei Suizidgefahr.",
+    },
+    {
+        "question": (
+            "Nach welchem Maßstab sind Betriebskosten umzulegen, wenn keine wirksame "
+            "abweichende Vereinbarung über den Umlageschlüssel getroffen wurde?"
+        ),
+        "answer": (
+            "Fehlt eine wirksame abweichende Vereinbarung, sind die Betriebskosten "
+            "nach dem Anteil der Wohnfläche umzulegen (§556a Abs. 1 Satz 1 BGB)."
+        ),
+        "ground_truth": (
+            "Ist kein wirksamer abweichender Umlageschlüssel vereinbart, verbleibt es "
+            "beim gesetzlichen Maßstab der Umlage nach dem Anteil der Wohnfläche "
+            "gemäß §556a Abs. 1 Satz 1 BGB; eine unklare oder unwirksame Klausel "
+            "(z. B. Umlage nach Miteigentumsanteilen) begründet keine abweichende "
+            "Vereinbarung (LG Bonn, Urteil vom 15.11.2012, 6 S 25/12)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§556a", "§556a Abs. 1"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "LG Bonn 6 S 25/12 — Umlageschlüssel: Wohnfläche als gesetzlicher Maßstab.",
+    },
+    {
+        "question": (
+            "Muss die Aufhebung einer Staffelmietvereinbarung – ebenso wie ihre "
+            "Vereinbarung – der Schriftform genügen?"
+        ),
+        "answer": (
+            "Nein. Das Schriftformerfordernis des §557a BGB gilt nach seinem "
+            "Wortlaut nur für die Vereinbarung einer Staffelmiete, nicht für deren "
+            "Aufhebung, die für den Mieter günstig ist."
+        ),
+        "ground_truth": (
+            "§557a BGB sieht die Schriftform ausdrücklich nur für die Vereinbarung "
+            "eines Staffelmietzinses vor; die für den Mieter günstige Aufhebung der "
+            "Staffelmietvereinbarung unterliegt nicht der Schriftform, weil die "
+            "Warnfunktion des Formerfordernisses insoweit nicht besteht (LG "
+            "Osnabrück, Urteil vom 02.04.2004, 12 S 46/04)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§557a"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "LG Osnabrück 12 S 46/04 — Schriftform §557a nur für Vereinbarung, nicht Aufhebung.",
+    },
+    {
+        "question": (
+            "Wer trägt die Beweislast dafür, ob die Ursache eines Mangels (z. B. "
+            "Schimmel) aus dem Verantwortungsbereich des Vermieters oder des Mieters "
+            "stammt?"
+        ),
+        "answer": (
+            "Die Beweislast ist nach Verantwortungsbereichen verteilt: Der Vermieter "
+            "muss beweisen, dass die Mangelursache nicht aus seinem Bereich stammt; "
+            "gelingt ihm das, muss der Mieter beweisen, dass er den Mangel nicht zu "
+            "vertreten hat."
+        ),
+        "ground_truth": (
+            "Die Beweislast ist nach den beiderseitigen Verantwortungsbereichen "
+            "verteilt: Der Vermieter muss darlegen und beweisen, dass die "
+            "Mangelursache nicht aus seinem Pflichten- und Verantwortungsbereich, "
+            "sondern aus dem Herrschafts- und Obhutsbereich des Mieters stammt; erst "
+            "danach muss der Mieter beweisen, dass er den Mangel nicht zu vertreten "
+            "hat (AG Saarburg, Urteil vom 12.10.2016, 5a C 191/15)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§536", "§535"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "AG Saarburg 5a C 191/15 — Beweislastverteilung nach Verantwortungsbereichen.",
+    },
+    {
+        "question": (
+            "Ab welcher Abweichung der tatsächlichen von der vertraglich vereinbarten "
+            "Wohnfläche liegt bei der Wohnraummiete ein zur Mietminderung "
+            "berechtigender Mangel vor?"
+        ),
+        "answer": (
+            "Ein Mangel im Sinne des §536 Abs. 1 BGB liegt vor, wenn die tatsächliche "
+            "Wohnfläche mehr als 10 Prozent unter der im Mietvertrag angegebenen "
+            "Fläche liegt; einer zusätzlichen Darlegung einer Gebrauchsbeeinträchtigung "
+            "bedarf es dann nicht."
+        ),
+        "ground_truth": (
+            "Bei der Wohnraummiete liegt ein zur Minderung berechtigender Mangel "
+            "(§536 Abs. 1 Satz 1 BGB) vor, wenn die Wohnfläche mehr als 10 Prozent "
+            "unter der im Mietvertrag angegebenen Fläche liegt; einer zusätzlichen "
+            "Darlegung einer Tauglichkeitsminderung bedarf es nicht, und die Grenze "
+            "gilt auch bei einer 'ca.'-Angabe (OLG Düsseldorf, Urteil vom 17.11.2011, "
+            "I-24 U 56/11, st. Rspr. des BGH)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§536", "§536 Abs. 1"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "OLG Düsseldorf I-24 U 56/11 — Wohnflächenabweichung > 10 % als Mangel.",
+    },
+    {
+        "question": (
+            "Ist die Kappungsgrenze des §558 Abs. 3 BGB zeitanteilig herabzusetzen, "
+            "wenn das Mietverhältnis bei Wirksamwerden der Mieterhöhung noch keine "
+            "drei Jahre bestanden hat?"
+        ),
+        "answer": (
+            "Nein. Die Kappungsgrenze wird bei kürzeren Mietverhältnissen nicht "
+            "zeitanteilig herabgesetzt; sie begrenzt die Steigerung über drei Jahre "
+            "auf 20 (bzw. 15) Prozent, sodass auch eine einzige Erhöhung diese Grenze "
+            "voll ausschöpfen darf."
+        ),
+        "ground_truth": (
+            "Die Kappungsgrenze des §558 Abs. 3 BGB ist nicht zeitanteilig "
+            "herabzusetzen, wenn das Mietverhältnis noch keine drei Jahre bestanden "
+            "hat; sie begrenzt nicht die einzelne Erhöhung, sondern die Steigerung "
+            "über einen Zeitraum von drei Jahren, sodass der Vermieter sie auch durch "
+            "eine einzige Mieterhöhung ausschöpfen darf (LG Lübeck, Urteil vom "
+            "29.06.2023, 14 S 95/22)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§558", "§558 Abs. 3"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "LG Lübeck 14 S 95/22 — Kappungsgrenze §558 Abs. 3 nicht zeitanteilig.",
+    },
+    {
+        "question": (
+            "Setzt eine wirksame Eigenbedarfskündigung voraus, dass der "
+            "Nutzungswunsch des Vermieters mit öffentlich-rechtlichen Vorgaben im "
+            "Einklang steht?"
+        ),
+        "answer": (
+            "Ja. Der Eigenbedarf nach §573 Abs. 2 Nr. 2 BGB erfordert einen auf "
+            "vernünftige Gründe gestützten Nutzungswunsch; vernünftig ist er nur, "
+            "wenn er mit öffentlich-rechtlichen Vorgaben (z. B. einer "
+            "Erhaltungsverordnung) im Einklang steht."
+        ),
+        "ground_truth": (
+            "Ein berechtigtes Interesse an der Eigenbedarfskündigung (§573 Abs. 2 "
+            "Nr. 2 BGB) setzt einen auf vernünftige Gründe gestützten Nutzungswunsch "
+            "voraus; wegen der Einheit der Rechtsordnung ist der Wunsch nur dann "
+            "vernünftig, wenn er mit öffentlich-rechtlichen Vorgaben im Einklang "
+            "steht – fehlt etwa die nach einer Erhaltungsverordnung erforderliche "
+            "Genehmigung, ist die Kündigung unwirksam (LG Berlin, Urteil vom "
+            "26.04.2022, 67 S 10/22)."
+        ),
+        "is_hallucination_plant": False,
+        "sections_needed": ["§573", "§573 Abs. 2"],
+        "collection": config.CASE_LAW_COLLECTION,
+        "notes": "LG Berlin 67 S 10/22 — Eigenbedarf: Nutzungswunsch und öffentlich-rechtliche Vorgaben.",
+    },
 ]
+
+# Gold Aktenzeichen per case-law item, in dataset order — the specific decision each
+# question was authored from. Used by the deterministic, judge-free retrieval metrics
+# (hit-rate@k / MRR) in `src.eval.runner`, which measure whether that decision is
+# retrieved and how highly it is ranked. (Note: several corpus decisions can support the
+# same holding, so a "miss" here often means an equally valid ruling was surfaced
+# instead — hit-rate is a floor on retrieval quality, not a ceiling.) The one date-only
+# note (LG Bonn garage) is verified via the explicit exception below.
+_CASE_LAW_GOLD_FILE_NUMBERS = [
+    "VIII ZR 355/18",  # Überlegungs-/Klagefrist §558b
+    "6 S 5/15",        # LG Bonn — Garage-Mietminderung (note is date-only)
+    "VIII ZR 21/13",   # Schönheitsreparaturen, unrenoviert
+    "4 C 111/22",      # Quotenabgeltungsklausel / Gesamtinfektion
+    "XII ZR 6/13",     # Betriebskosten-Ausschlussfrist §556 Abs. 3
+    "36 C 122/91",     # Kaution: Prüfungsfrist ~6 Monate
+    "15 C 83/19",      # Schonfristzahlung §569
+    "VIII ZR 305/19",  # Modernisierungsankündigung 3 Monate
+    "411 C 10539/22",  # Untervermietung §553
+    "210 C 103/12",    # Tierhaltungsverbot (Formularklausel) unwirksam
+    "6 S 36/04",       # Kleinreparaturklausel
+    "1 S 222/22",      # vorgeschobener Eigenbedarf -> Schadensersatz
+    "67 S 218/17",     # Mietpreisbremse
+    "2 BvR 1507/22",   # Räumungsschutz §765a ZPO
+    "6 S 25/12",       # Umlageschlüssel §556a
+    "12 S 46/04",      # Staffelmiete §557a Schriftform
+    "5a C 191/15",     # Mietmangel-Beweislast nach Verantwortungsbereichen
+    "I-24 U 56/11",    # Wohnflächenabweichung > 10 %
+    "14 S 95/22",      # Kappungsgrenze §558 Abs. 3
+    "67 S 10/22",      # Eigenbedarf: öffentlich-rechtliche Vorgaben
+]
+
+_case_law_items = [i for i in EVAL_DATASET if i["collection"] == config.CASE_LAW_COLLECTION]
+assert len(_case_law_items) == len(_CASE_LAW_GOLD_FILE_NUMBERS), (
+    "reference file-number list is out of sync with the case-law eval items"
+)
+for _item, _fn in zip(_case_law_items, _CASE_LAW_GOLD_FILE_NUMBERS):
+    # Guard against reordering: the Aktenzeichen must appear in the item's own notes
+    # (except the one date-only note, checked by its distinctive prefix).
+    assert _fn in _item["notes"] or "LG Bonn 2015-11-12" in _item["notes"], (
+        f"gold Aktenzeichen {_fn!r} does not match notes {_item['notes']!r}"
+    )
+    _item["reference_file_number"] = _fn

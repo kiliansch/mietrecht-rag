@@ -19,6 +19,7 @@ from src.api.sse import SSE_HEADERS
 from src.api.streaming import agent_sse_events
 from src.cases import store as cases_store
 from src.chat_history import store as chat_history_store
+from src.usage import make_usage_callback
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,7 @@ def chat(
     else:
         raise HTTPException(status_code=422, detail="thread_id oder case_id erforderlich.")
 
+    usage_cb = make_usage_callback()
     updates = agent_stream(
         req.message,
         thread_id=thread_id,
@@ -87,9 +89,12 @@ def chat(
         enabled_tools=(),
         case_id=case_id,
         language="en" if req.language == "en" else "de",
+        callbacks=[usage_cb],
     )
     return StreamingResponse(
-        agent_sse_events(updates), media_type="text/event-stream", headers=SSE_HEADERS
+        agent_sse_events(updates, usage_cb=usage_cb),
+        media_type="text/event-stream",
+        headers=SSE_HEADERS,
     )
 
 
@@ -135,6 +140,7 @@ def chat_resume(
 
             on_final = persist_summary
 
+    usage_cb = make_usage_callback()
     updates = resume_stream(
         {req.interrupt_id: req.decision},
         thread_id=thread_id,
@@ -142,9 +148,10 @@ def chat_resume(
         role=user.persona,
         case_id=case_id,
         language="en" if req.language == "en" else "de",
+        callbacks=[usage_cb],
     )
     return StreamingResponse(
-        agent_sse_events(updates, on_final=on_final),
+        agent_sse_events(updates, on_final=on_final, usage_cb=usage_cb),
         media_type="text/event-stream",
         headers=SSE_HEADERS,
     )

@@ -162,6 +162,7 @@ def stream(
     case_id: str | None = None,
     task: str = "chat",
     language: str = "de",
+    callbacks: list[Any] | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Stream per-node state updates for one turn (`stream_mode="updates"`).
 
@@ -169,11 +170,18 @@ def stream(
     [AIMessage(...)]}}` or `{"tools": {"messages": [ToolMessage(...), ...]}}`. Used by
     the UI to render intermediate tool calls/results and the final answer without any
     prompt-building or tool-loop logic of its own.
+
+    `callbacks`, when given, are attached to the run so LLM usage from the agent AND its
+    tools (e.g. multi-query expansion) is captured, not just the agent node's message.
     """
     graph = build_graph()
     yield from graph.stream(
         {"messages": [HumanMessage(content=user_input)]},
-        config={"configurable": {"thread_id": thread_id}, "recursion_limit": RECURSION_LIMIT},
+        config={
+            "configurable": {"thread_id": thread_id},
+            "recursion_limit": RECURSION_LIMIT,
+            "callbacks": callbacks or [],
+        },
         context=Context(
             user_name=user_name,
             role=role,
@@ -202,6 +210,7 @@ def resume_stream(
     case_id: str | None = None,
     task: str = "chat",
     language: str = "de",
+    callbacks: list[Any] | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Resume an interrupted thread with `{interrupt_id: "approve" | "reject"}`.
 
@@ -213,7 +222,11 @@ def resume_stream(
     graph = build_graph()
     yield from graph.stream(
         Command(resume=resume_map),
-        config={"configurable": {"thread_id": thread_id}, "recursion_limit": RECURSION_LIMIT},
+        config={
+            "configurable": {"thread_id": thread_id},
+            "recursion_limit": RECURSION_LIMIT,
+            "callbacks": callbacks or [],
+        },
         context=Context(
             user_name=user_name,
             role=role,
@@ -265,18 +278,24 @@ def review(
     thread_id: str,
     user_name: str,
     role: str = "mieter",
+    callbacks: list[Any] | None = None,
 ) -> tuple[str, list[str]]:
     """Run a contract-clause review. Returns (final_answer, tool_output_strings).
 
     tool_output_strings are the raw search_law outputs, used by the caller to
-    extract citations via parse_citations.
+    extract citations via parse_citations. `callbacks`, when given, capture the
+    clause's LLM usage (agent + tools).
     """
     graph = build_graph()
     final_answer = ""
     tool_outputs: list[str] = []
     for update in graph.stream(
         {"messages": [HumanMessage(content=clause_text)]},
-        config={"configurable": {"thread_id": thread_id}, "recursion_limit": RECURSION_LIMIT},
+        config={
+            "configurable": {"thread_id": thread_id},
+            "recursion_limit": RECURSION_LIMIT,
+            "callbacks": callbacks or [],
+        },
         context=Context(
             user_name=user_name,
             role=role,

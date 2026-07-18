@@ -30,6 +30,7 @@ from src.contracts.parse import extract_text
 from src.contracts.review import Finding, review_clause
 from src.contracts.segment import risk_filter, segment_clauses
 from src.memory import store as memory_store
+from src.usage import make_usage_callback, summarize
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +195,7 @@ def documents_analyse(
         + "\n\n"
         + delimit(doc["content"], source=doc["title"])
     )
+    usage_cb = make_usage_callback()
     updates = agent_stream(
         message,
         thread_id=case["thread_id"],
@@ -203,6 +205,7 @@ def documents_analyse(
         enabled_tools=(),
         case_id=case["id"],
         task="letter_analysis",
+        callbacks=[usage_cb],
     )
 
     def persist_summary(text: str) -> None:
@@ -212,7 +215,7 @@ def documents_analyse(
             logger.exception("Failed to persist letter analysis")
 
     return StreamingResponse(
-        agent_sse_events(updates, on_final=persist_summary),
+        agent_sse_events(updates, on_final=persist_summary, usage_cb=usage_cb),
         media_type="text/event-stream",
         headers=SSE_HEADERS,
     )
@@ -230,13 +233,18 @@ def _contract_review_events(
         yield sse_event("done", {})
         return
 
+    usage_cb = make_usage_callback()
     findings: list[Finding] = []
     for i, clause in enumerate(risky):
         heading = clause["heading"] or f"Klausel {clause['index'] + 1}"
         yield sse_event("progress", {"index": i, "total": total, "heading": heading})
         try:
             finding = review_clause(
-                clause, thread_id=str(uuid_mod.uuid4()), user_name=username, role=role
+                clause,
+                thread_id=str(uuid_mod.uuid4()),
+                user_name=username,
+                role=role,
+                usage_cb=usage_cb,
             )
         except Exception:  # noqa: BLE001 — one clause failing must not abort the rest
             logger.exception("Clause review failed")
@@ -278,6 +286,11 @@ def _contract_review_events(
         )
     except Exception:
         logger.exception("Failed to persist contract review")
+    usage = summarize(usage_cb)
+    yield sse_event(
+        "usage",
+        {"input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"]},
+    )
     yield sse_event("done", {})
 
 
